@@ -1,0 +1,29 @@
+
+- name: templates out node csr
+  become: yes
+  template:
+    src: node-csr.json.j2
+    dest: "/usr/share/ca-certificates/kthw/{{ node }}-csr.json"
+
+- name: generate node and node key pems
+  become: yes
+  shell: |-
+    cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname={{ node }},{{ hostvars[node].ip }} -profile=kubernetes {{ node }}-csr.json | cfssljson -bare {{ node }}
+  args:
+    chdir: /usr/share/ca-certificates/kthw
+
+- name: copy pems to nodes
+  delegate_to: "{{ node }}"
+  become: yes
+  copy:
+    src: "/usr/share/ca-certificates/kthw/{{ node }}.pem"
+    dest: /root
+    mode: 0644
+
+- name: copy pems key to nodes
+  delegate_to: "{{ node }}"
+  become: yes
+  copy:
+    src: "/usr/share/ca-certificates/kthw/{{ node }}-key.pem"
+    dest: /root
+    mode: 0600

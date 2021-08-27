@@ -1,0 +1,8 @@
+
+k8s_internal_cluster_service_range_first_ip: 10.32.0.1
+k8s_hostnames:
+  - kubernetes
+  - kubernetes.default
+  - kubernetes.default.svc
+  - kubernetes.default.svc.cluster
+  - kubernetes.svc.cluster.local
