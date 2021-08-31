@@ -9,21 +9,23 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname={{ node }},{{ hostvars[node].ip }} -profile=kubernetes {{ node }}-csr.json | cfssljson -bare {{ node }}
+    chmod 0644 {{ node }}-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
-- name: copy pems to nodes
+- name: copy pems and pems key to nodes
   delegate_to: "{{ node }}"
   become: yes
   copy:
-    src: "/usr/share/ca-certificates/kthw/{{ node }}.pem"
+    src: "/usr/share/ca-certificates/kthw/{{ pem.file }}"
     dest: /root
-    mode: 0644
-
-- name: copy pems key to nodes
-  delegate_to: "{{ node }}"
-  become: yes
-  copy:
-    src: "/usr/share/ca-certificates/kthw/{{ node }}-key.pem"
-    dest: /root
-    mode: 0600
+    mode: "{{ pem.mode }}"
+  loop:
+    - file: ca.pem
+      mode: 644
+    - file: "{{ node }}.pem"
+      mode: 644
+    - file: "{{ node }}-key.pem"
+      mode: 600
+  loop_control:
+    loop_var: pem

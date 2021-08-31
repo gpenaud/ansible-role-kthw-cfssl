@@ -35,6 +35,7 @@
   become: yes
   shell: |-
     cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+    chmod 0644 ca-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
@@ -51,6 +52,7 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin
+    chmod 0644 admin-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
@@ -76,6 +78,7 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+    chmod 0644 kube-controller-manager-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
@@ -92,6 +95,7 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-proxy-csr.json | cfssljson -bare kube-proxy
+    chmod 0644 kube-proxy-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
@@ -108,6 +112,7 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+    chmod 0644 kube-scheduler-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
@@ -124,6 +129,7 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname={{ k8s_internal_cluster_service_range_first_ip }},{{ groups['masters'] | map('extract', hostvars, 'ip') | join(',') }},127.0.0.1,{{ k8s_hostnames | join(',') }} -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes
+    chmod 0644 kubernetes-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
@@ -140,20 +146,21 @@
   become: yes
   shell: |-
     cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes service-account-csr.json | cfssljson -bare service-account
+    chmod 0644 service-account-key.pem
   args:
     chdir: /usr/share/ca-certificates/kthw
 
-# ------------------------------------------------------------------------------
-# remove csr files
-# ------------------------------------------------------------------------------
-
-- name: remove csr files
-  become: yes
-  shell: |-
-    rm -rf *json *csr *csr.json
-  args:
-    chdir: /usr/share/ca-certificates/kthw
-    warn: no
+# # ------------------------------------------------------------------------------
+# # remove csr files
+# # ------------------------------------------------------------------------------
+#
+# - name: remove csr files
+#   become: yes
+#   shell: |-
+#     rm -rf *json *csr *csr.json
+#   args:
+#     chdir: /usr/share/ca-certificates/kthw
+#     warn: no
 
 # ------------------------------------------------------------------------------
 # copy pems to masters
@@ -163,17 +170,23 @@
   delegate_to: "{{ item.0 }}"
   become: yes
   copy:
-    src: "/usr/share/ca-certificates/kthw/{{ item.1 }}"
+    src: "/usr/share/ca-certificates/kthw/{{ item.1.file }}"
     dest: /root
-    mode: 0644
+    mode: "{{ item.1.mode }}"
   with_nested:
     - "{{ groups['masters'] }}"
     - "{{ pems }}"
   vars:
     pems:
-      - ca.pem
-      - ca-key.pem
-      - kubernetes-key.pem
-      - kubernetes.pem
-      - service-account-key.pem
-      - service-account.pem
+      - file: ca.pem
+        mode: 644
+      - file: ca-key.pem
+        mode: 600
+      - file: kubernetes-key.pem
+        mode: 600
+      - file: kubernetes.pem
+        mode: 644
+      - file: service-account-key.pem
+        mode: 600
+      - file: service-account.pem
+        mode: 644
